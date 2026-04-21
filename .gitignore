@@ -1,0 +1,16 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Node
+node_modules/
+
+# Archivos pesados / datos
+videos/
+audios/
+analysis_outputs/
+
+# Sistema
+.DS_Store
+Thumbs.db

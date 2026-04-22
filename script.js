@@ -3,7 +3,7 @@
  */
 
 lucide.createIcons();
-const CONFIG = { API_URL: 'http://localhost:3000/api/pacientes' };
+const CONFIG = { API_URL: '/api/pacientes' };
 
 // =======================================================
 // ⚠️ TUS ARCHIVOS CON SUS RUTAS (CARPETAS) ⚠️
@@ -1642,7 +1642,7 @@ const protocolo = {
         alert(`Iniciando análisis de la pista ${pistaNumero} con Python. Esto demorará unos segundos...`);
 
         try {
-            const response = await fetch(`http://localhost:3000/api/pacientes/${index}/analizar/${pistaNumero}`, {
+            const response = await fetch(`${CONFIG.API_URL}/${index}/analizar/${pistaNumero}`, {
                 method: 'POST'
             });
 
@@ -1869,7 +1869,7 @@ const protocolo = {
             }
         } catch (error) {
             console.error("Error al conectar:", error);
-            alert("Error al conectar con el servidor Node.js en localhost:3000. Revisa que el servidor esté corriendo.");
+            alert("Error al conectar con el servidor. Verificá que esté funcionando correctamente.");
         }
     }
 };

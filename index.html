@@ -36,8 +36,8 @@
     <!-- MENÚ LATERAL -->
     <aside class="w-64 bg-primary text-white flex flex-col shadow-xl z-20 shrink-0">
         <div class="p-6 text-center border-b border-white/10">
-            <h1 class="font-serif text-2xl font-bold tracking-wide">NeuroMúsica</h1>
-            <p class="text-xs text-secondary mt-1">Plataforma de Evaluación</p>
+            <h1 class="font-serif text-2xl font-bold tracking-wide">Music Therapy Tools</h1>
+            <p class="text-xs text-secondary mt-1">Plataforma de herramientas para musicoterapeutas</p>
         </div>
         <nav class="flex-1 px-4 py-6 space-y-2">
             <button onclick="app.cambiarVista('inicio')"
@@ -50,10 +50,10 @@
                 id="nav-pacientes">
                 <i data-lucide="users" class="w-5 h-5"></i> Pacientes
             </button>
-            <button onclick="app.cambiarVista('protocolo')"
+            <button onclick="app.cambiarVista('evaluaciones')"
                 class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/10 text-left transition-colors"
-                id="nav-protocolo">
-                <i data-lucide="activity" class="w-5 h-5"></i> Iniciar Protocolo
+                id="nav-evaluaciones">
+                <i data-lucide="activity" class="w-5 h-5"></i> Evaluaciones
             </button>
         </nav>
         <div class="p-4 border-t border-white/10 text-xs flex items-center justify-center gap-2 bg-black/10">
@@ -73,13 +73,12 @@
             </header>
             <div id="home-resumen" class="flex flex-wrap justify-center gap-3 mb-8"></div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div onclick="app.cambiarVista('protocolo')"
+                <div onclick="app.cambiarVista('evaluaciones')"
                     class="bg-white p-8 rounded-2xl cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all border-l-4 border-action shadow-md flex flex-col items-center text-center">
                     <div class="bg-action/10 w-16 h-16 rounded-full flex items-center justify-center mb-4"><i
                             data-lucide="play-circle" class="text-action w-8 h-8"></i></div>
-                    <h3 class="font-bold text-xl mb-2 text-gray-800">Iniciar Protocolo</h3>
-                    <p class="text-sm text-gray-500">Crear una nueva evaluación por pasos con lista de reproducción de
-                        audios.</p>
+                    <h3 class="font-bold text-xl mb-2 text-gray-800">Evaluaciones</h3>
+                    <p class="text-sm text-gray-500">Acceder a los tipos de evaluación disponibles y continuar con el protocolo.</p>
                 </div>
                 <div onclick="app.cambiarVista('pacientes')"
                     class="bg-white p-8 rounded-2xl cursor-pointer hover:-translate-y-1 hover:shadow-xl transition-all border-l-4 border-primary shadow-md flex flex-col items-center text-center">
@@ -108,7 +107,7 @@
             <div class="flex justify-between items-end mb-8">
                 <div>
                     <h2 class="text-3xl font-serif font-bold text-primary">Pacientes</h2>
-                    <p class="text-gray-500 mt-2">Listado de evaluaciones realizadas.</p>
+                    <p class="text-gray-500 mt-2">Listado organizado por tipo de paciente.</p>
                 </div>
                 <div class="flex gap-4">
                     <div class="relative">
@@ -117,11 +116,26 @@
                         <input type="text" id="filtro-pacientes" placeholder="Buscar paciente..."
                             class="pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary outline-none">
                     </div>
-                    <button onclick="app.cambiarVista('protocolo')"
+                    <button onclick="app.abrirNuevoPacienteDesdeListado()"
                         class="bg-primary text-white px-5 py-2 rounded-lg shadow hover:bg-primary/90 transition flex items-center gap-2">
                         <i data-lucide="plus" class="w-4 h-4"></i> Nuevo
                     </button>
                 </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+                <div class="flex flex-wrap gap-2">
+                    <button id="pacientes-tab-adulto" type="button" onclick="app.cambiarFiltroPacientes('adulto')"
+                        class="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition">
+                        Adultos
+                    </button>
+                    <button id="pacientes-tab-nino" type="button" onclick="app.cambiarFiltroPacientes('nino')"
+                        class="px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition">
+                        Niños/as
+                    </button>
+                </div>
+                <span id="pacientes-tab-resumen"
+                    class="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full font-medium"></span>
             </div>
 
             <div class="bg-white rounded-xl shadow-md overflow-hidden table-container">
@@ -131,7 +145,7 @@
                             <th>Fecha</th>
                             <th>Paciente</th>
                             <th>Diagnóstico</th>
-                            <th>Dominancia</th>
+                            <th id="pacientes-col-mano-habil">Mano hábil</th>
                             <th class="text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -143,6 +157,104 @@
                     <p class="text-lg">No hay pacientes registrados aún.</p>
                 </div>
             </div>
+        </section>
+
+        <!-- VISTA: EVALUACIONES -->
+        <section id="vista-evaluaciones" class="vista-seccion hidden max-w-5xl mx-auto animate-fade-in">
+            <header class="mb-10 text-center">
+                <h2 class="text-4xl font-serif font-bold text-primary mb-2">Evaluaciones</h2>
+                <p class="text-gray-500">Elegí el tipo de evaluación para continuar con el flujo correspondiente.</p>
+            </header>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <button type="button" onclick="app.abrirEvaluacionAdulto()"
+                    class="bg-white p-8 rounded-2xl text-left hover:-translate-y-1 hover:shadow-xl transition-all border-l-4 border-action shadow-md">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="bg-action/10 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+                                <i data-lucide="clipboard-list" class="text-action w-7 h-7"></i>
+                            </div>
+                            <h3 class="font-bold text-2xl text-gray-800">Evaluación Adulto</h3>
+                        </div>
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-action bg-action/10 px-3 py-1 rounded-full">Disponible</span>
+                    </div>
+                    <div class="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-action">
+                        Iniciar protocolo
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </div>
+                </button>
+                <button type="button" onclick="app.abrirEvaluacionNino()"
+                    class="bg-white p-8 rounded-2xl text-left hover:-translate-y-1 hover:shadow-xl transition-all border-l-4 border-action shadow-md">
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <div class="bg-action/10 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+                                <i data-lucide="baby" class="text-action w-7 h-7"></i>
+                            </div>
+                            <h3 class="font-bold text-2xl text-gray-800">Evaluación Niño/a</h3>
+                        </div>
+                        <span class="text-xs font-semibold uppercase tracking-[0.18em] text-action bg-action/10 px-3 py-1 rounded-full">Disponible</span>
+                    </div>
+                    <div class="mt-6 text-sm text-action font-medium">
+                        Abrir módulos
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- VISTA: EVALUACIÓN NIÑO -->
+        <section id="vista-evaluacion-nino" class="vista-seccion hidden max-w-6xl mx-auto animate-fade-in">
+            <header class="mb-8 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.22em] text-action">BNPM</p>
+                    <h2 class="text-4xl font-serif font-bold text-primary mt-2">Evaluación Niño</h2>
+                    <p class="text-gray-500 mt-2">Seleccioná el módulo a completar según el contexto clínico o familiar.</p>
+                </div>
+                <button type="button" onclick="app.cambiarVista('evaluaciones')"
+                    class="bg-white border border-slate-200 text-slate-700 px-5 py-2.5 rounded-xl font-semibold hover:bg-slate-50 transition inline-flex items-center gap-2">
+                    <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver a Evaluaciones
+                </button>
+            </header>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                <button type="button" onclick="app.abrirModuloNino('a')" class="child-eval-card child-eval-card-family">
+                    <div class="child-eval-card-head">
+                        <div class="child-eval-card-icon">
+                            <i data-lucide="home" class="w-7 h-7"></i>
+                        </div>
+                        <span class="child-eval-card-badge">Familia</span>
+                    </div>
+                    <h3 class="child-eval-card-title">Módulo A</h3>
+                    <p class="child-eval-card-copy">Formulario pensado para familia, con observaciones cotidianas.</p>
+                    <div class="child-eval-card-footer">
+                        <span>Completar dentro de la plataforma</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </div>
+                </button>
+
+                <button type="button" onclick="app.abrirModuloNino('b')" class="child-eval-card child-eval-card-clinical">
+                    <div class="child-eval-card-head">
+                        <div class="child-eval-card-icon">
+                            <i data-lucide="clipboard-plus" class="w-7 h-7"></i>
+                        </div>
+                        <span class="child-eval-card-badge">Registro clínico</span>
+                    </div>
+                    <h3 class="child-eval-card-title">Módulo B</h3>
+                    <p class="child-eval-card-copy">Planilla clínica digital.</p>
+                    <div class="child-eval-card-footer">
+                        <span>Abrir formulario clínico</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </div>
+                </button>
+            </div>
+        </section>
+
+        <!-- VISTA: BNPM MÓDULO A -->
+        <section id="vista-bnpm-modulo-a" class="vista-seccion hidden max-w-6xl mx-auto animate-fade-in">
+            <div id="bnpm-modulo-a-root"></div>
+        </section>
+
+        <!-- VISTA: BNPM MÓDULO B -->
+        <section id="vista-bnpm-modulo-b" class="vista-seccion hidden max-w-6xl mx-auto animate-fade-in">
+            <div id="bnpm-modulo-b-root"></div>
         </section>
 
         <!-- VISTA: PROTOCOLO -->
@@ -336,7 +448,14 @@
 
                         <!-- Lateralidad -->
                         <div class="form-group">
-                            <label class="block text-sm font-semibold text-gray-700 mb-1">Dominancia *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tipo de paciente</label>
+                            <select id="dat-tipo-paciente" disabled
+                                class="w-full border rounded-lg p-2.5 bg-gray-100 text-gray-500 outline-none cursor-not-allowed">
+                                <option value="adulto" selected>Adulto</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Mano hábil *</label>
                             <select id="dat-dominancia" required
                                 class="w-full border rounded-lg p-2.5 focus:border-primary bg-gray-50 outline-none">
                                 <option value="">Seleccione...</option>

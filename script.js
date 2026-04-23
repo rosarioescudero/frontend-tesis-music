@@ -3,18 +3,18 @@
  */
 
 lucide.createIcons();
-const CONFIG = { API_URL: '/api/pacientes' };
+const CONFIG = { API_URL: 'http://localhost:3000/api/pacientes' };
 
 // =======================================================
 // ⚠️ TUS ARCHIVOS CON SUS RUTAS (CARPETAS) ⚠️
 // =======================================================
 const ESTRUCTURA_DE_AUDIOS = {
     isocronos: [
-        "isocronos/metronomo_isócrono80bpm.wav",
-        "isocronos/metronomo_isócrono108bpm.wav",
-        "isocronos/metronomo_isócrono120bpm.wav",
-        "isocronos/metronomo_isócrono132bpm.wav",
-        "isocronos/metronomo_isócrono160bpm.wav"
+        "isocronos/metronomo_isocrono80bpm.wav",
+        "isocronos/metronomo_isocrono108bpm.wav",
+        "isocronos/metronomo_isocrono120bpm.wav",
+        "isocronos/metronomo_isocrono132bpm.wav",
+        "isocronos/metronomo_isocrono160bpm.wav"
     ],
     abruptos: [
         ["abruptos/PA+10/PA+10__20-40.wav", "abruptos/PA+10/PA+10__21-40.wav", "abruptos/PA+10/PA+10__22-40.wav", "abruptos/PA+10/PA+10__23-40.wav", "abruptos/PA+10/PA+10__24-40.wav", "abruptos/PA+10/PA+10__25-40.wav"],
@@ -163,6 +163,7 @@ const ANALYSIS_CATEGORY_RULES = [
 
 const app = {
     pacientes: [],
+    pacientesFiltroTipo: 'adulto',
     init: function () {
         this.verificarConexion();
         this.cambiarVista('inicio');
@@ -202,7 +203,10 @@ const app = {
             btn.classList.remove('bg-white/20');
             btn.classList.add('hover:bg-white/10');
         });
-        const btnActivo = document.getElementById(`nav-${vistaId}`);
+        const navId = ['protocolo', 'evaluacion-nino', 'bnpm-modulo-a', 'bnpm-modulo-b'].includes(vistaId)
+            ? 'evaluaciones'
+            : vistaId;
+        const btnActivo = document.getElementById(`nav-${navId}`);
         if (btnActivo) {
             btnActivo.classList.add('bg-white/20');
             btnActivo.classList.remove('hover:bg-white/10');
@@ -213,24 +217,88 @@ const app = {
 
         lucide.createIcons();
     },
+    abrirEvaluacionAdulto: function () {
+        this.cambiarVista('protocolo');
+    },
+    esPacienteAdulto: function (paciente) {
+        return !this.esPacienteNino(paciente);
+    },
+    pacienteCoincideFiltroTipo: function (paciente) {
+        return this.pacientesFiltroTipo === 'nino'
+            ? this.esPacienteNino(paciente)
+            : this.esPacienteAdulto(paciente);
+    },
+    actualizarTabsPacientes: function (datos) {
+        const adultos = datos.filter(p => this.esPacienteAdulto(p)).length;
+        const ninos = datos.filter(p => this.esPacienteNino(p)).length;
+        const tabAdulto = document.getElementById('pacientes-tab-adulto');
+        const tabNino = document.getElementById('pacientes-tab-nino');
+        const resumen = document.getElementById('pacientes-tab-resumen');
+        if (tabAdulto) {
+            tabAdulto.className = this.pacientesFiltroTipo === 'adulto'
+                ? 'px-4 py-2 rounded-full text-sm font-semibold border border-primary bg-primary text-white transition'
+                : 'px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition';
+            tabAdulto.textContent = `Adultos (${adultos})`;
+        }
+        if (tabNino) {
+            tabNino.className = this.pacientesFiltroTipo === 'nino'
+                ? 'px-4 py-2 rounded-full text-sm font-semibold border border-action bg-action text-white transition'
+                : 'px-4 py-2 rounded-full text-sm font-semibold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition';
+            tabNino.textContent = `Niños/as (${ninos})`;
+        }
+        if (resumen) {
+            resumen.textContent = this.pacientesFiltroTipo === 'nino'
+                ? `${ninos} paciente(s) niño/a`
+                : `${adultos} paciente(s) adulto`;
+        }
+    },
+    cambiarFiltroPacientes: function (tipo) {
+        this.pacientesFiltroTipo = tipo === 'nino' ? 'nino' : 'adulto';
+        this.renderizarTablaPacientes(this.pacientes);
+    },
+    abrirNuevoPacienteDesdeListado: function () {
+        if (this.pacientesFiltroTipo === 'nino') {
+            this.abrirEvaluacionNino();
+            return;
+        }
+        this.abrirEvaluacionAdulto();
+    },
     renderizarTablaPacientes: function (datos) {
         const tbody = document.getElementById('tabla-pacientes-body');
         const msjVacio = document.getElementById('msj-sin-pacientes');
         const tablaContainer = document.querySelector('.table-container table');
+        const colManoHabil = document.getElementById('pacientes-col-mano-habil');
+        const textoBusqueda = document.getElementById('filtro-pacientes')?.value?.toLowerCase().trim() || '';
 
         tbody.innerHTML = '';
 
-        if (!datos || datos.length === 0) {
+        const datosFiltrados = (datos || []).filter(p => {
+            const coincideTipo = this.pacienteCoincideFiltroTipo(p);
+            if (!coincideTipo) return false;
+            if (!textoBusqueda) return true;
+            return (p.nombre || '').toLowerCase().includes(textoBusqueda) ||
+                ((p.diagnostico || '').toLowerCase().includes(textoBusqueda));
+        });
+        this.actualizarTabsPacientes(datos || []);
+
+        if (!datosFiltrados.length) {
             msjVacio.classList.remove('hidden');
             tablaContainer.classList.add('hidden');
+            const etiquetaTipo = this.pacientesFiltroTipo === 'nino' ? 'niños/as' : 'adultos';
+            msjVacio.querySelector('p').textContent = textoBusqueda
+                ? `No hay pacientes ${etiquetaTipo} que coincidan con la búsqueda.`
+                : `No hay pacientes ${etiquetaTipo} registrados aún.`;
             return;
         }
 
         msjVacio.classList.add('hidden');
         tablaContainer.classList.remove('hidden');
+        if (colManoHabil) {
+            colManoHabil.style.display = this.pacientesFiltroTipo === 'nino' ? 'none' : '';
+        }
 
         // Crear una lista con su índice real en el array original
-        const conIndice = datos.map(p => {
+        const conIndice = datosFiltrados.map(p => {
             const realIndex = this.pacientes.indexOf(p);
             return { p, realIndex };
         });
@@ -238,11 +306,12 @@ const app = {
         [...conIndice].reverse().forEach(({ p, realIndex }) => {
             const tr = document.createElement('tr');
             tr.className = "hover:bg-gray-50 transition-colors";
+            const mostrarManoHabil = this.pacientesFiltroTipo !== 'nino';
             tr.innerHTML = `
                 <td class="font-medium text-gray-600">${p.fecha ? new Date(p.fecha).toLocaleDateString() : '-'}</td>
                 <td class="font-bold text-gray-800">${p.nombre}</td>
                 <td class="text-gray-600">${p.diagnostico || '-'}</td>
-                <td class="text-gray-600">${p.dominancia || '-'}</td>
+                ${mostrarManoHabil ? `<td class="text-gray-600">${p.dominancia || '-'}</td>` : ''}
                 <td class="text-center acciones-td flex items-center justify-center gap-1"></td>
             `;
 
@@ -251,17 +320,32 @@ const app = {
             // Botón Ver Resultados / Videos
             const btnVer = document.createElement('button');
             btnVer.className = "text-primary hover:text-blue-800 p-2 bg-blue-50 rounded-lg tooltip";
-            btnVer.title = "Ver Resultados y Videos";
-            btnVer.innerHTML = '<i data-lucide="file-bar-chart-2" class="w-5 h-5"></i>';
-            btnVer.onclick = () => this.verDetallePaciente(realIndex);
+            if (this.esPacienteNino(p)) {
+                btnVer.title = "Abrir Evaluación Niño";
+                btnVer.innerHTML = '<i data-lucide="baby" class="w-5 h-5"></i>';
+                btnVer.onclick = () => this.abrirPacienteNinoDesdeRegistro(realIndex);
+            } else {
+                btnVer.title = "Ver Resultados y Videos";
+                btnVer.innerHTML = '<i data-lucide="file-bar-chart-2" class="w-5 h-5"></i>';
+                btnVer.onclick = () => this.verDetallePaciente(realIndex);
+            }
             accionesTd.appendChild(btnVer);
 
             // Botón Descargar PDF
             const btnPDF = document.createElement('button');
             btnPDF.className = "text-red-600 hover:text-red-800 p-2 bg-red-50 rounded-lg tooltip";
-            btnPDF.title = "Descargar PDF";
             btnPDF.innerHTML = '<i data-lucide="file-down" class="w-5 h-5"></i>';
-            btnPDF.onclick = () => this.generarPDF(p);
+            if (this.esPacienteNino(p)) {
+                btnPDF.title = "Abrir PDF BNPM";
+                btnPDF.onclick = () => {
+                    this.bnpmPacienteSeleccionadoB = String(realIndex);
+                    this.abrirModuloNino('b');
+                    setTimeout(() => this.descargarPdfModuloB(), 0);
+                };
+            } else {
+                btnPDF.title = "Descargar PDF";
+                btnPDF.onclick = () => this.generarPDF(p);
+            }
             accionesTd.appendChild(btnPDF);
 
             tbody.appendChild(tr);
@@ -270,11 +354,7 @@ const app = {
     },
     configurarBuscador: function () {
         document.getElementById('filtro-pacientes')?.addEventListener('input', (e) => {
-            const txt = e.target.value.toLowerCase();
-            this.renderizarTablaPacientes(this.pacientes.filter(p =>
-                p.nombre.toLowerCase().includes(txt) ||
-                (p.diagnostico && p.diagnostico.toLowerCase().includes(txt))
-            ));
+            this.renderizarTablaPacientes(this.pacientes);
         });
     },
 
@@ -345,7 +425,7 @@ const app = {
         const datosCol2 = [
             ['Psicopatología', paciente.psicopatologia || 'Ninguna'],
             ['Medicación', paciente.medicacion || 'Ninguna'],
-            ['Dominancia / Mano inicio', `${paciente.dominancia || 'N/A'}  ·  ${paciente.manoInicio || 'N/A'}`],
+            ['Mano hábil / Mano inicio', `${paciente.dominancia || 'N/A'}  ·  ${paciente.manoInicio || 'N/A'}`],
         ];
 
         datosCol1.forEach((d, i) => {
@@ -497,7 +577,7 @@ const app = {
         const infoDiv = document.getElementById('modal-info');
         infoDiv.innerHTML = `
             <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Investigador</span><span class="font-semibold text-gray-800">${p.investigador || 'N/A'}</span></div>
-            <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Dominancia</span><span class="font-semibold text-gray-800">${p.dominancia || 'N/A'}</span></div>
+            <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Mano hábil</span><span class="font-semibold text-gray-800">${p.dominancia || 'N/A'}</span></div>
             <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Mano Inicio</span><span class="font-semibold text-gray-800">${p.manoInicio || 'N/A'}</span></div>
             <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Medicación</span><span class="font-semibold text-gray-800">${p.medicacion || 'Ninguna'}</span></div>
         `;
@@ -1642,7 +1722,7 @@ const protocolo = {
         alert(`Iniciando análisis de la pista ${pistaNumero} con Python. Esto demorará unos segundos...`);
 
         try {
-            const response = await fetch(`${CONFIG.API_URL}/${index}/analizar/${pistaNumero}`, {
+            const response = await fetch(`http://localhost:3000/api/pacientes/${index}/analizar/${pistaNumero}`, {
                 method: 'POST'
             });
 
@@ -1781,10 +1861,41 @@ const protocolo = {
 
         reproductor.src = rutaSegura;
         reproductor.load();
+        this.actualizarEstadoTempoVariations();
 
         if (autoplay) {
             reproductor.play().catch(e => console.log("El navegador requiere interacción previa.", e));
         }
+    },
+
+    audioActualEsIsocrono: function () {
+        const itemActual = this.playlistFinal[this.indiceAudioActual];
+        if (!itemActual || !itemActual.archivo) return false;
+
+        const archivoNormalizado = String(itemActual.archivo)
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+
+        return archivoNormalizado.includes('isocrono') || ESTRUCTURA_DE_AUDIOS.isocronos.includes(itemActual.archivo);
+    },
+
+    actualizarEstadoTempoVariations: function () {
+        const selectTempo = document.getElementById('skill-tempo');
+        if (!selectTempo) return;
+
+        const esIsocrono = this.audioActualEsIsocrono();
+        if (esIsocrono) {
+            selectTempo.value = 'No evaluado';
+        }
+
+        selectTempo.disabled = esIsocrono;
+        selectTempo.classList.toggle('bg-gray-100', esIsocrono);
+        selectTempo.classList.toggle('text-gray-400', esIsocrono);
+        selectTempo.classList.toggle('cursor-not-allowed', esIsocrono);
+        selectTempo.classList.toggle('opacity-80', esIsocrono);
+        selectTempo.classList.toggle('bg-white', !esIsocrono);
+        selectTempo.title = esIsocrono ? 'Tempo Variations no aplica en audios isocronos.' : '';
     },
 
     siguienteAudio: function () {
@@ -1810,6 +1921,7 @@ const protocolo = {
             if (sr) sr.value = "No evaluado";
             if (st) st.value = "No evaluado";
             if (sa) sa.value = "No evaluado";
+            this.actualizarEstadoTempoVariations();
         } else {
             document.getElementById('contador-audio').textContent = "26";
             document.getElementById('nombre-audio-actual').textContent = "BATERÍA COMPLETADA";
@@ -1842,6 +1954,7 @@ const protocolo = {
             psicopatologia: obtenerValorSeguro('dat-psicopatologia'),
             diagnostico: obtenerValorSeguro('dat-diagnostico'),
             dominancia: obtenerValorSeguro('dat-dominancia'),
+            tipo_registro: 'adulto',
             manoInicio: obtenerValorSeguro('dat-mano-inicio'),
             medidasManos: {
                 md_mayor: obtenerValorSeguro('dat-mano-md-mayor'),
@@ -1869,7 +1982,7 @@ const protocolo = {
             }
         } catch (error) {
             console.error("Error al conectar:", error);
-            alert("Error al conectar con el servidor. Verificá que esté funcionando correctamente.");
+            alert("Error al conectar con el servidor Node.js en localhost:3000. Revisa que el servidor esté corriendo.");
         }
     }
 };
@@ -2001,7 +2114,7 @@ app.verDetallePaciente = async function (index) {
     const infoDiv = document.getElementById('modal-info');
     infoDiv.innerHTML = `
         <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Investigador</span><span class="font-semibold text-gray-800">${p.investigador || 'N/A'}</span></div>
-        <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Dominancia</span><span class="font-semibold text-gray-800">${p.dominancia || 'N/A'}</span></div>
+        <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Mano hábil</span><span class="font-semibold text-gray-800">${p.dominancia || 'N/A'}</span></div>
         <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Mano Inicio</span><span class="font-semibold text-gray-800">${p.manoInicio || 'N/A'}</span></div>
         <div class="bg-white px-3 py-2 rounded-lg border"><span class="text-gray-500 text-xs block">Medicación</span><span class="font-semibold text-gray-800">${p.medicacion || 'Ninguna'}</span></div>
     `;
@@ -2164,6 +2277,12 @@ app.abrirPacienteDesdeHome = function (index) {
     setTimeout(() => this.verDetallePaciente(index), 0);
 };
 
+app.abrirPacienteNinoDesdeRegistro = function (index) {
+    this.bnpmPacienteSeleccionadoA = String(index);
+    this.bnpmPacienteSeleccionadoB = String(index);
+    this.cambiarVista('evaluacion-nino');
+};
+
 const __appVerificarConexionOriginal = app.verificarConexion.bind(app);
 app.verificarConexion = async function () {
     await __appVerificarConexionOriginal();
@@ -2178,6 +2297,1034 @@ app.cambiarVista = function (vistaId) {
     }
 };
 
+const BNPM_STORAGE_KEY = 'neuroMusicaBNPMV1';
+const BNPM_FREQUENCY_OPTIONS = ['Nunca', 'Raramente', 'A veces', 'Frecuentemente', 'Siempre'];
+const BNPM_SCALE_04 = ['0', '1', '2', '3', '4'];
+const BNPM_SCALE_15 = ['1', '2', '3', '4', '5'];
+
+const BNPM_MODULE_A_SECTIONS = [
+    {
+        title: 'Datos basicos',
+        copy: 'Informacion general que contextualiza la evaluacion familiar.',
+        fields: [
+            { type: 'text', name: 'child_name', label: 'Nombre completo del nino o nina' },
+            { type: 'date', name: 'child_birth_date', label: 'Fecha de nacimiento' },
+            { type: 'number', name: 'child_age', label: 'Edad' },
+            { type: 'text', name: 'respondent_name', label: 'Quien responde' },
+            { type: 'text', name: 'respondent_relation', label: 'Relacion con el nino' },
+            { type: 'date', name: 'form_date', label: 'Fecha' },
+            { type: 'text', name: 'referral_source', label: 'Derivacion' },
+            { type: 'textarea', name: 'consultation_reason', label: 'Motivo de consulta', wide: true }
+        ]
+    },
+    {
+        title: '1. Silencio, ambiente sonoro en el hogar y comportamientos espontaneos',
+        fields: [
+            { type: 'radio', name: 'home_sound_environment', label: 'Como describirias el ambiente habitual de la casa?', options: ['Muy silenciosa', 'Silencio moderado', 'Ruidos normales', 'Bastante ruidosa', 'Muy ruidosa'], wide: true },
+            { type: 'radio', name: 'school_sound_environment', label: 'Como describirias el ambiente habitual de la institucion educativa?', options: ['Muy silenciosa', 'Silencio moderado', 'Ruidos normales', 'Bastante ruidosa', 'Muy ruidosa'], wide: true },
+            { type: 'checkbox-group', name: 'silence_behavior', label: 'Como se comporta cuando se encuentra en silencio?', options: ['Se muestra tranquila', 'Se inquieta', 'Busca generar sonidos', 'Pide que pongan musica', 'No se observan cambios'], wide: true },
+            { type: 'text', name: 'silence_behavior_other', label: 'Otros comportamientos observados' },
+            { type: 'radio', name: 'vocalizes_in_silence', label: 'Vocaliza mas cuando el ambiente esta silencioso?', options: ['Si', 'No', 'A veces'] },
+            { type: 'text', name: 'vocalizes_in_silence_notes', label: 'Observaciones sobre vocalizaciones' },
+            { type: 'checkbox-group', name: 'self_stimulation_sound', label: 'Cuando no hay musica, hace alguna de estas cosas?', options: ['Golpea superficies', 'Mueve objetos que suenan', 'Juguetea con el timbre de su voz', 'Busca objetos que vibren', 'Produce sonidos repetitivos'], wide: true },
+            { type: 'text', name: 'self_stimulation_other', label: 'Otra conducta sonora' }
+        ]
+    },
+    {
+        title: '2. Respuestas espontaneas a la musica',
+        fields: [
+            { type: 'radio', name: 'music_seek_frequency', label: 'Busca musica por iniciativa propia?', options: BNPM_FREQUENCY_OPTIONS },
+            { type: 'checkbox-group', name: 'first_response_music', label: 'Cuando suena musica, que suele hacer primero?', options: ['Se queda quieta escuchando', 'Sonrie', 'Se mueve automaticamente', 'Se acerca a la fuente sonora', 'Cambia de actividad', 'Se tapa los oidos'], wide: true },
+            { type: 'text', name: 'first_response_music_other', label: 'Otra respuesta inicial' },
+            { type: 'radio', name: 'attentive_listening', label: 'Parece escuchar con atencion cuando algo le interesa sonoramente?', options: ['Si', 'No', 'A veces'] },
+            { type: 'text', name: 'attentive_listening_examples', label: 'Ejemplos de atencion auditiva' },
+            { type: 'radio', name: 'recognizes_songs', label: 'Reconoce canciones aunque no las este mirando?', options: ['Si', 'No', 'No estoy seguro/a'] }
+        ]
+    },
+    {
+        title: '3. Preferencias y aversiones musicales',
+        fields: [
+            { type: 'checkbox-group', name: 'liked_music_types', label: 'Musica que le gusta', options: ['Infantil o canciones simples', 'Musica ritmica', 'Melodias suaves', 'Musica rapida', 'Musica lenta', 'Voces femeninas', 'Voces masculinas', 'Instrumental'], wide: true },
+            { type: 'text', name: 'liked_music_other', label: 'Otra preferencia musical' },
+            { type: 'textarea', name: 'favorite_songs', label: 'Canciones, artistas o estilos favoritos', wide: true },
+            { type: 'textarea', name: 'disliked_music_types', label: 'Tipos de musica que rechaza o le generan molestia', wide: true },
+            { type: 'checkbox-group', name: 'rejection_expression', label: 'Como expresa el rechazo?', options: ['Se tapa los oidos', 'Se aleja', 'Se irrita', 'Cambia de actividad', 'Llora'], wide: true },
+            { type: 'text', name: 'rejection_expression_other', label: 'Otra forma de rechazo' }
+        ]
+    },
+    {
+        title: '4. Perfil sensorial auditivo',
+        fields: [
+            { type: 'scale', name: 'sens_loud_sounds', label: 'Sensibilidad a sonidos fuertes (1-5)', scale: BNPM_SCALE_15 },
+            { type: 'scale', name: 'sens_soft_sounds', label: 'Sensibilidad a sonidos suaves (1-5)', scale: BNPM_SCALE_15 },
+            { type: 'scale', name: 'sens_loud_voices', label: 'Sensibilidad a voces fuertes (1-5)', scale: BNPM_SCALE_15 },
+            { type: 'scale', name: 'sens_instruments', label: 'Sensibilidad a instrumentos musicales (1-5)', scale: BNPM_SCALE_15 },
+            { type: 'checkbox-group', name: 'preferred_timbres', label: 'Que timbres prefiere?', options: ['Percusion suave', 'Percusion fuerte', 'Piano', 'Cuerdas', 'Sonidos metalicos', 'Campanas', 'Voz humana', 'Vibracion'], wide: true },
+            { type: 'text', name: 'preferred_timbres_other', label: 'Otros timbres preferidos' },
+            { type: 'textarea', name: 'avoided_timbres', label: 'Timbres que evita', wide: true }
+        ]
+    },
+    {
+        title: '5. Movimiento y ritmo',
+        fields: [
+            { type: 'radio', name: 'moves_with_music', label: 'Se mueve cuando escucha musica?', options: BNPM_FREQUENCY_OPTIONS },
+            { type: 'checkbox-group', name: 'movement_behaviors', label: 'Comportamientos observados', options: ['Balanceo', 'Aplausos', 'Saltos', 'Movimientos de cabeza', 'Movimientos repetitivos'], wide: true },
+            { type: 'text', name: 'movement_behaviors_other', label: 'Otro comportamiento motor' },
+            { type: 'scale', name: 'rhythm_pulse_stable', label: 'Mantiene un pulso estable (1-5)', scale: BNPM_SCALE_15 },
+            { type: 'scale', name: 'rhythm_sync_steps', label: 'Sincroniza palmas o pasos (1-5)', scale: BNPM_SCALE_15 },
+            { type: 'scale', name: 'rhythm_reproduce_patterns', label: 'Reproduce ritmos simples (1-5)', scale: BNPM_SCALE_15 }
+        ]
+    },
+    {
+        title: '6. Tacto, vibracion y propiocepcion',
+        fields: [
+            { type: 'radio', name: 'hits_instruments_hard', label: 'Golpea muy fuerte los instrumentos?', options: ['Si', 'No', 'A veces'] },
+            { type: 'radio', name: 'seeks_vibrations', label: 'Busca vibraciones?', options: ['Si', 'No'] },
+            { type: 'text', name: 'seeks_vibrations_details', label: 'Si busca vibraciones, cuales?' },
+            { type: 'radio', name: 'avoids_textures', label: 'Evita tocar ciertas texturas de instrumentos?', options: ['Si', 'No'] },
+            { type: 'text', name: 'avoids_textures_details', label: 'Materiales evitados' },
+            { type: 'radio', name: 'seeks_material_temperature', label: 'Busca tocar temperatura o metal de instrumentos?', options: ['Si', 'No'] },
+            { type: 'text', name: 'seeks_material_temperature_details', label: 'Materiales o superficies buscadas' }
+        ]
+    },
+    {
+        title: '7. Regulacion emocional con musica y con silencio',
+        fields: [
+            { type: 'textarea', name: 'calming_music', label: 'Musica que calma', wide: true },
+            { type: 'textarea', name: 'activating_music', label: 'Musica que activa', wide: true },
+            { type: 'textarea', name: 'rejecting_sounds', label: 'Sonidos que generan rechazo', wide: true },
+            { type: 'checkbox-group', name: 'emotional_reactions', label: 'Reacciones emocionales observadas', options: ['Sonrie', 'Se relaja', 'Se activa mucho', 'Se angustia', 'Se tapa los oidos', 'Busca contencion'], wide: true },
+            { type: 'text', name: 'emotional_reactions_other', label: 'Otra reaccion emocional' }
+        ]
+    },
+    {
+        title: '8. Comunicacion y musica',
+        fields: [
+            { type: 'radio', name: 'vocalizes_with_music', label: 'Vocaliza cuando escucha musica?', options: ['Si', 'No', 'A veces'] },
+            { type: 'radio', name: 'vocalizes_more_in_silence', label: 'Vocaliza mas en silencio?', options: ['Si', 'No', 'No lo tengo claro'] },
+            { type: 'radio', name: 'imitates_melodies', label: 'Imita melodias o sonidos?', options: ['Si', 'No', 'Intentos parciales'] },
+            { type: 'radio', name: 'uses_music_to_communicate', label: 'Usa la musica para pedir, anticipar o regularse?', options: ['Si', 'No', 'No lo se'] },
+            { type: 'text', name: 'uses_music_to_communicate_examples', label: 'Ejemplos' }
+        ]
+    },
+    {
+        title: '9. Observaciones adicionales de la familia',
+        fields: [
+            { type: 'textarea', name: 'family_additional_notes', label: 'Observaciones abiertas', wide: true }
+        ]
+    }
+];
+
+const BNPM_MODULE_A_DOMAINS = [
+    {
+        key: 'regulacion',
+        label: 'Regulacion sensorial y tonica',
+        items: [
+            'Reacciona negativamente ante sonidos intensos',
+            'Se tapa los oidos frente a ciertos sonidos',
+            'Busca generar sonidos cuando hay silencio',
+            'Parece necesitar ruido o musica para regularse',
+            'Se sobreexcita con estimulos sonoros',
+            'Evita ambientes sonoros',
+            'Busca vibraciones o graves'
+        ]
+    },
+    {
+        key: 'temporal',
+        label: 'Procesamiento temporal',
+        items: [
+            'Se mueve espontaneamente siguiendo musica',
+            'Mantiene un ritmo estable',
+            'Se desorganiza cuando cambia el tempo',
+            'Anticipa pausas o finales musicales',
+            'Repite patrones ritmicos simples',
+            'Muestra dificultad para sincronizarse'
+        ]
+    },
+    {
+        key: 'audio_motor',
+        label: 'Integracion audio-motora',
+        items: [
+            'Coordina movimiento con sonido',
+            'Ajusta su movimiento al ritmo',
+            'Puede iniciar movimiento a partir de estimulos sonoros',
+            'Presenta movimientos repetitivos no ajustados al entorno',
+            'Tiene dificultad para coordinar acciones con musica'
+        ]
+    },
+    {
+        key: 'comunicacion',
+        label: 'Comunicacion y sincronia',
+        items: [
+            'Vocaliza en interaccion con musica',
+            'Imita sonidos o melodias',
+            'Responde a estimulos musicales del otro',
+            'Participa en juegos de turno',
+            'Usa sonidos o musica para comunicarse',
+            'Presenta dificultad para sostener intercambios'
+        ]
+    },
+    {
+        key: 'ejecutivas',
+        label: 'Funciones ejecutivas en contexto musical',
+        items: [
+            'Mantiene la atencion en actividades musicales',
+            'Puede esperar pausas musicales',
+            'Cambia su conducta ante cambios en la musica',
+            'Se frustra ante cambios o demandas',
+            'Persevera en patrones repetitivos',
+            'Puede seguir consignas musicales simples'
+        ]
+    }
+];
+
+const BNPM_MODULE_B = {
+    domains: [
+        {
+            key: 'sensorial',
+            label: 'Dominio 1 - Regulacion sensorial',
+            tasks: [
+                { key: 'intensidad_sonora', title: 'Tarea 1: Intensidad sonora', observables: ['Sobresalto', 'Evitacion', 'Busqueda de sonido', 'Indiferencia', 'Regulacion adecuada'] },
+                { key: 'silencio', title: 'Tarea 2: Silencio', observables: ['Genera sonidos', 'Inquietud motora', 'Se autorregula', 'Evita el silencio', 'Contacto visual', 'Desconexion'], numeric: [{ name: 'latencia_ruptura_silencio', label: 'Latencia a ruptura del silencio (segundos)' }], subscales: ['Regulacion', 'Busqueda', 'Atencion', 'Tolerancia temporal', 'Social'] }
+            ]
+        },
+        {
+            key: 'temporal',
+            label: 'Dominio 2 - Procesamiento temporal',
+            tasks: [
+                { key: 'sincronizacion', title: 'Tarea 1: Sincronizacion', observables: ['Sincronizado', 'Variable', 'Muy inestable', 'No logra'], extrasChoice: { name: 'sincronizacion_tipo_error', label: 'Tipo de error', options: ['Adelantado', 'Atrasado', 'Mixto'] }, numeric: [{ name: 'sincronizacion_error_medio', label: 'Error medio (ms)' }, { name: 'sincronizacion_jitter', label: 'Jitter (ms)' }] },
+                { key: 'continuacion', title: 'Tarea 2: Continuacion', observables: ['Mantiene tempo', 'Deriva progresiva', 'Pierde ritmo'] },
+                { key: 'cambio_tempo', title: 'Tarea 3: Cambio de tempo', observables: ['Se adapta rapido', 'Adaptacion lenta', 'No se adapta'], numeric: [{ name: 'cambio_tempo_latencia', label: 'Latencia de ajuste' }] }
+            ]
+        },
+        {
+            key: 'audio_motor',
+            label: 'Dominio 3 - Integracion audio-motora',
+            tasks: [
+                { key: 'movimiento_libre', title: 'Movimiento libre', observables: ['Coordinado', 'Parcial', 'Desorganizado', 'Estereotipado'] },
+                { key: 'imitacion_motora', title: 'Imitacion motora', observables: ['Precisa', 'Aproximada', 'Fallida'], numeric: [{ name: 'imitacion_motora_latencia', label: 'Latencia' }] },
+                { key: 'acoplamiento', title: 'Acoplamiento', observables: ['Sincronia', 'Intermitente', 'No acopla'] }
+            ]
+        },
+        {
+            key: 'comunicacion',
+            label: 'Dominio 4 - Comunicacion musical',
+            tasks: [
+                { key: 'turn_taking', title: 'Turn-taking', observables: ['Espera turno', 'Se adelanta', 'No responde'] },
+                { key: 'imitacion_vocal', title: 'Imitacion vocal', observables: ['Reproduce', 'Aproxima', 'No imita'] },
+                { key: 'interaccion_libre', title: 'Interaccion libre', observables: ['Inicia', 'Responde', 'Pasivo'], extrasChoice: { name: 'interaccion_libre_reciprocidad', label: 'Reciprocidad', options: ['Alta', 'Media', 'Baja'] } }
+            ]
+        },
+        {
+            key: 'ejecutivo',
+            label: 'Dominio 5 - Funciones ejecutivas',
+            tasks: [
+                { key: 'stop_musical', title: 'Stop musical', observables: ['Se detiene', 'Parcial', 'No inhibe'] },
+                { key: 'cambio_regla', title: 'Cambio de regla', observables: ['Flexible', 'Persevera', 'Confusion'] },
+                { key: 'secuencia', title: 'Secuencia', observables: ['Correcta', 'Parcial', 'Fallida'] }
+            ]
+        }
+    ],
+    markers: ['Hipersensibilidad', 'Busqueda sensorial', 'Bajo registro', 'Asincronia temporal', 'Impulsividad', 'Rigidez', 'Baja reciprocidad', 'Desorganizacion motora']
+};
+
+app.escapeHtml = function (value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+};
+
+app.formatearBnpmTexto = function (value) {
+    return String(value ?? '')
+        .replace(/Modulo/g, 'Módulo')
+        .replace(/modulo/g, 'módulo')
+        .replace(/Nino/g, 'Niño')
+        .replace(/nino/g, 'niño')
+        .replace(/nina/g, 'niña')
+        .replace(/basicos/g, 'básicos')
+        .replace(/Basicos/g, 'Básicos')
+        .replace(/evaluacion/g, 'evaluación')
+        .replace(/Evaluacion/g, 'Evaluación')
+        .replace(/clinico/g, 'clínico')
+        .replace(/clinica/g, 'clínica')
+        .replace(/clinicas/g, 'clínicas')
+        .replace(/clinicos/g, 'clínicos')
+        .replace(/musica/g, 'música')
+        .replace(/Musica/g, 'Música')
+        .replace(/diagnostico/g, 'diagnóstico')
+        .replace(/Diagnostico/g, 'Diagnóstico')
+        .replace(/comunicacion/g, 'comunicación')
+        .replace(/Comunicacion/g, 'Comunicación')
+        .replace(/regulacion/g, 'regulación')
+        .replace(/Regulacion/g, 'Regulación')
+        .replace(/integracion/g, 'integración')
+        .replace(/Integracion/g, 'Integración')
+        .replace(/orientacion/g, 'orientación')
+        .replace(/Orientacion/g, 'Orientación')
+        .replace(/terapeutica/g, 'terapéutica')
+        .replace(/Terapeutica/g, 'Terapéutica')
+        .replace(/observacion/g, 'observación')
+        .replace(/Observacion/g, 'Observación')
+        .replace(/observaciones iniciales/g, 'observaciones iniciales')
+        .replace(/opcion/g, 'opción')
+        .replace(/Opcion/g, 'Opción')
+        .replace(/publica/g, 'pública')
+        .replace(/Publica/g, 'Pública')
+        .replace(/version/g, 'versión')
+        .replace(/Version/g, 'Versión')
+        .replace(/seccion/g, 'sección')
+        .replace(/Seccion/g, 'Sección')
+        .replace(/todavia/g, 'todavía')
+        .replace(/Aun/g, 'Aún')
+        .replace(/aun/g, 'aún')
+        .replace(/ultimo/g, 'último')
+        .replace(/Ultimo/g, 'Último')
+        .replace(/diagnostico/g, 'diagnóstico');
+};
+
+app.leerBnpmStorage = function () {
+    try {
+        return JSON.parse(localStorage.getItem(BNPM_STORAGE_KEY) || '{}');
+    } catch (error) {
+        return {};
+    }
+};
+
+app.guardarBnpmStorage = function (data) {
+    localStorage.setItem(BNPM_STORAGE_KEY, JSON.stringify(data));
+};
+
+app.esPacienteNino = function (paciente) {
+    return !!paciente && (
+        paciente.tipo_registro === 'nino' ||
+        paciente.tipo_registro === 'niño' ||
+        paciente.tipo_evaluacion === 'bnpm_nino' ||
+        paciente.tipo_evaluacion === 'bnpm-niño' ||
+        paciente.bnpm
+    );
+};
+
+app.obtenerPacientesNino = function () {
+    return this.pacientes
+        .map((paciente, index) => ({ paciente, index }))
+        .filter(item => this.esPacienteNino(item.paciente));
+};
+
+app.obtenerBnpmPacienteDefault = function () {
+    if (this.pacienteActual && this.pacienteActual.index != null && this.esPacienteNino(this.pacientes[this.pacienteActual.index])) {
+        return String(this.pacienteActual.index);
+    }
+    const primerNino = this.obtenerPacientesNino()[0];
+    return primerNino ? String(primerNino.index) : '';
+};
+
+app.obtenerBnpmPacienteRecord = function (patientIndex) {
+    const paciente = this.pacientes[Number(patientIndex)];
+    if (paciente && paciente.bnpm) {
+        return paciente.bnpm;
+    }
+    const storage = this.leerBnpmStorage();
+    return storage[String(patientIndex)] || null;
+};
+
+app.guardarBnpmModulo = function (moduleKey, patientIndex, payload) {
+    const storage = this.leerBnpmStorage();
+    const paciente = this.pacientes[Number(patientIndex)] || {};
+    const key = String(patientIndex);
+    storage[key] = storage[key] || {};
+    storage[key].patientIndex = Number(patientIndex);
+    storage[key].patientName = paciente.nombre || 'Paciente';
+    storage[key][moduleKey === 'a' ? 'moduloA' : 'moduloB'] = {
+        savedAt: new Date().toISOString(),
+        values: payload
+    };
+    this.guardarBnpmStorage(storage);
+};
+
+app.obtenerBnpmValores = function (moduleKey, patientIndex) {
+    const record = this.obtenerBnpmPacienteRecord(patientIndex);
+    if (!record) return {};
+    const modulo = moduleKey === 'a' ? record.moduloA : record.moduloB;
+    return (modulo && modulo.values) || {};
+};
+
+app.obtenerBnpmFechaGuardado = function (moduleKey, patientIndex) {
+    const record = this.obtenerBnpmPacienteRecord(patientIndex);
+    if (!record) return '';
+    const modulo = moduleKey === 'a' ? record.moduloA : record.moduloB;
+    return modulo && modulo.savedAt ? new Date(modulo.savedAt).toLocaleString('es-AR') : '';
+};
+
+app.obtenerOpcionesPacientesBnpm = function (selectedIndex) {
+    return this.obtenerPacientesNino().map(({ paciente, index }) => `
+        <option value="${index}" ${String(selectedIndex) === String(index) ? 'selected' : ''}>${this.escapeHtml(paciente.nombre || `Paciente ${index + 1}`)}</option>
+    `).join('');
+};
+
+app.obtenerValorBnpm = function (values, name) {
+    return values && Object.prototype.hasOwnProperty.call(values, name) ? values[name] : '';
+};
+
+app.obtenerArrayBnpm = function (values, name) {
+    const value = this.obtenerValorBnpm(values, name);
+    if (Array.isArray(value)) return value;
+    if (value === '' || value == null) return [];
+    return [value];
+};
+
+app.renderBnpmField = function (field, values) {
+    const fieldClass = `bnpm-field${field.wide ? ' bnpm-field-wide' : ''}`;
+    const currentValue = this.obtenerValorBnpm(values, field.name);
+    const currentArray = this.obtenerArrayBnpm(values, field.name);
+
+    if (field.type === 'textarea') {
+        return `
+            <label class="${fieldClass}">
+                <span class="bnpm-label">${this.formatearBnpmTexto(field.label)}</span>
+                <textarea name="${field.name}" class="bnpm-textarea">${this.escapeHtml(currentValue)}</textarea>
+            </label>
+        `;
+    }
+
+    if (field.type === 'text' || field.type === 'number' || field.type === 'date') {
+        return `
+            <label class="${fieldClass}">
+                <span class="bnpm-label">${this.formatearBnpmTexto(field.label)}</span>
+                <input type="${field.type}" name="${field.name}" value="${this.escapeHtml(currentValue)}" class="bnpm-input">
+            </label>
+        `;
+    }
+
+    if (field.type === 'radio') {
+        return `
+            <div class="${fieldClass}">
+                <span class="bnpm-label">${this.formatearBnpmTexto(field.label)}</span>
+                <div class="bnpm-choice-group">
+                    ${field.options.map(option => `
+                        <label class="bnpm-choice-chip">
+                            <input type="radio" name="${field.name}" value="${this.escapeHtml(option)}" ${currentValue === option ? 'checked' : ''}>
+                            <span>${this.escapeHtml(this.formatearBnpmTexto(option))}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (field.type === 'checkbox-group') {
+        return `
+            <div class="${fieldClass}">
+                <span class="bnpm-label">${this.formatearBnpmTexto(field.label)}</span>
+                <div class="bnpm-choice-group">
+                    ${field.options.map(option => `
+                        <label class="bnpm-choice-chip">
+                            <input type="checkbox" name="${field.name}" value="${this.escapeHtml(option)}" ${currentArray.includes(option) ? 'checked' : ''}>
+                            <span>${this.escapeHtml(this.formatearBnpmTexto(option))}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    if (field.type === 'scale') {
+        return `
+            <div class="${fieldClass}">
+                <span class="bnpm-label">${this.formatearBnpmTexto(field.label)}</span>
+                <div class="bnpm-scale-group">
+                    ${field.scale.map(option => `
+                        <label class="bnpm-scale-option">
+                            <input type="radio" name="${field.name}" value="${option}" ${String(currentValue) === String(option) ? 'checked' : ''}>
+                            <span>${option}</span>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    return '';
+};
+
+app.serializarFormularioBnpm = function (form) {
+    const data = {};
+    Array.from(form.elements).forEach(element => {
+        if (!element.name || element.disabled) return;
+
+        if (element.type === 'checkbox') {
+            if (!Array.isArray(data[element.name])) {
+                data[element.name] = [];
+            }
+            if (element.checked) {
+                data[element.name].push(element.value);
+            }
+            return;
+        }
+
+        if (element.type === 'radio') {
+            if (element.checked) {
+                data[element.name] = element.value;
+            } else if (!Object.prototype.hasOwnProperty.call(data, element.name)) {
+                data[element.name] = '';
+            }
+            return;
+        }
+
+        data[element.name] = element.value;
+    });
+    return data;
+};
+
+app.obtenerDatosPacienteNinoDesdeFormulario = function (moduleKey) {
+    const prefix = `bnpm-${moduleKey}-new-`;
+    return {
+        nombre: document.getElementById(`${prefix}name`)?.value?.trim() || '',
+        fecha_nacimiento: document.getElementById(`${prefix}birth-date`)?.value || '',
+        edad: document.getElementById(`${prefix}age`)?.value || '',
+        fecha: document.getElementById(`${prefix}evaluation-date`)?.value || new Date().toISOString().slice(0, 10),
+        diagnostico: document.getElementById(`${prefix}diagnosis`)?.value?.trim() || '',
+        derivacion: document.getElementById(`${prefix}referral`)?.value?.trim() || '',
+        observaciones_iniciales: document.getElementById(`${prefix}notes`)?.value?.trim() || ''
+    };
+};
+
+app.crearPacienteNinoBnpm = async function (moduleKey) {
+    const datos = this.obtenerDatosPacienteNinoDesdeFormulario(moduleKey);
+    if (!datos.nombre) {
+        alert('Completa al menos el nombre del paciente niño para crearlo.');
+        return;
+    }
+
+    const payload = {
+        fecha: datos.fecha,
+        nombre: datos.nombre,
+        email: '',
+        investigador: '',
+        medicacion: '',
+        psicopatologia: '',
+        diagnostico: datos.diagnostico,
+        dominancia: '',
+        manoInicio: '',
+        medidasManos: {},
+        evaluaciones_detalladas: [],
+        tipo_registro: 'nino',
+        tipo_evaluacion: 'bnpm_nino',
+        fecha_nacimiento: datos.fecha_nacimiento,
+        edad: datos.edad,
+        derivacion: datos.derivacion,
+        observaciones_iniciales: datos.observaciones_iniciales,
+        bnpm: {
+            moduloA: null,
+            moduloB: null,
+            compartir_familia: {
+                estado: 'placeholder'
+            }
+        }
+    };
+
+    const response = await fetch(CONFIG.API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+        alert('No se pudo crear el paciente niño en el registro.');
+        return;
+    }
+
+    await this.verificarConexion();
+    const match = [...this.pacientes]
+        .map((paciente, index) => ({ paciente, index }))
+        .reverse()
+        .find(({ paciente }) => this.esPacienteNino(paciente) && paciente.nombre === datos.nombre && String(paciente.fecha || '') === String(datos.fecha || ''));
+
+    const newIndex = match ? match.index : this.obtenerBnpmPacienteDefault();
+    this[`bnpmPacienteSeleccionado${moduleKey.toUpperCase()}`] = String(newIndex);
+    this.renderizarModuloNino(moduleKey);
+    alert(`Paciente niño creado: ${datos.nombre}.`);
+};
+
+app.actualizarPacienteBnpm = async function (patientIndex, payload) {
+    const response = await fetch(`${CONFIG.API_URL}/${patientIndex}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    }).catch(() => null);
+
+    if (!response || !response.ok) {
+        return false;
+    }
+
+    await this.verificarConexion();
+    return true;
+};
+
+app.abrirEvaluacionNino = function () {
+    this.cambiarVista('evaluacion-nino');
+};
+
+app.abrirModuloNino = function (moduleKey) {
+    this.cambiarVista(`bnpm-modulo-${moduleKey}`);
+    this.renderizarModuloNino(moduleKey);
+};
+
+app.renderizarModuloNino = function (moduleKey) {
+    const root = document.getElementById(`bnpm-modulo-${moduleKey}-root`);
+    if (!root) return;
+
+    const selectedIndex = this[`bnpmPacienteSeleccionado${moduleKey.toUpperCase()}`] ?? this.obtenerBnpmPacienteDefault();
+    this[`bnpmPacienteSeleccionado${moduleKey.toUpperCase()}`] = selectedIndex;
+    const patient = selectedIndex !== '' ? (this.pacientes[Number(selectedIndex)] || {}) : {};
+    const hasChildPatients = this.obtenerPacientesNino().length > 0;
+    const savedAt = selectedIndex !== '' ? this.obtenerBnpmFechaGuardado(moduleKey, selectedIndex) : '';
+    const toolbarNote = moduleKey === 'b'
+        ? 'Módulo B guarda y actualiza el registro del paciente niño dentro de la plataforma. Módulo A y B comparten el mismo paciente.'
+        : 'La opción para compartir con familia queda preparada visualmente, pero sin enlace funcional hasta contar con una ruta pública o soporte específico.';
+
+    root.innerHTML = `
+        <div class="bnpm-shell">
+            <div class="bnpm-header">
+                <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.22em] text-white/70">Evaluación Niño</p>
+                        <h2 class="text-3xl font-serif font-bold mt-2">${moduleKey === 'a' ? 'Módulo A - Familia' : 'Módulo B - Registro clínico'}</h2>
+                        <p class="text-white/80 mt-2">${moduleKey === 'a' ? 'Base digital para observaciones familiares y escalas de perfil musical.' : 'Registro profesional con dominios, tareas, puntajes, observables y orientación inicial.'}</p>
+                    </div>
+                    <button type="button" onclick="app.cambiarVista('evaluacion-nino')" class="bg-white/15 hover:bg-white/20 text-white px-4 py-2 rounded-lg font-semibold text-sm transition inline-flex items-center gap-2">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i> Volver a Módulos
+                    </button>
+                </div>
+            </div>
+            <div class="bnpm-toolbar">
+                <div>
+                    <label class="bnpm-label">Paciente niño</label>
+                    <select id="bnpm-${moduleKey}-patient" class="bnpm-toolbar-select" onchange="app.cambiarPacienteBnpm('${moduleKey}', this.value)">
+                        <option value="" ${selectedIndex === '' ? 'selected' : ''}>${hasChildPatients ? 'Seleccionar paciente niño...' : 'Primero crea un paciente niño'}</option>
+                        ${this.obtenerOpcionesPacientesBnpm(selectedIndex)}
+                    </select>
+                    <p class="text-xs text-slate-500 mt-2">${savedAt ? `Último guardado: ${this.escapeHtml(savedAt)}` : 'Aún no hay una versión guardada para este paciente.'}</p>
+                </div>
+                <div class="bnpm-toolbar-actions">
+                    <button type="button" onclick="app.crearPacienteNinoBnpm('${moduleKey}')" class="track-action-secondary">Nuevo paciente niño</button>
+                    ${moduleKey === 'a'
+                        ? `
+                            <button type="button" onclick="app.guardarFormularioBnpm('a')" class="track-action-primary">Guardar borrador</button>
+                            <button type="button" onclick="app.compartirModuloAFamilia()" class="track-action-secondary">Generar enlace</button>
+                        `
+                        : `
+                            <button type="button" onclick="app.guardarFormularioBnpm('b')" class="track-action-primary">Guardar módulo</button>
+                            <button type="button" onclick="app.descargarPdfModuloB()" class="track-action-secondary">Descargar PDF</button>
+                        `}
+                </div>
+            </div>
+            <div class="bnpm-form">
+                <div class="bnpm-note">${toolbarNote}</div>
+                ${this.renderizarCreadorPacienteNino(moduleKey)}
+                ${selectedIndex === ''
+                    ? `
+                        <div class="bnpm-empty mt-4">
+                            ${hasChildPatients ? 'Selecciona un paciente niño existente o crea uno nuevo para empezar.' : 'Todavía no hay pacientes niño registrados. Completa el bloque superior para crear el primero.'}
+                        </div>
+                    `
+                    : (moduleKey === 'a' ? this.renderizarModuloAFormulario(selectedIndex, patient) : this.renderizarModuloBFormulario(selectedIndex, patient))}
+            </div>
+        </div>
+    `;
+
+    if (moduleKey === 'b') {
+        document.getElementById('bnpm-form-b')?.addEventListener('input', () => this.actualizarResumenModuloB());
+        this.actualizarResumenModuloB();
+    }
+
+    lucide.createIcons();
+};
+
+app.cambiarPacienteBnpm = function (moduleKey, patientIndex) {
+    this[`bnpmPacienteSeleccionado${moduleKey.toUpperCase()}`] = String(patientIndex);
+    this.renderizarModuloNino(moduleKey);
+};
+
+app.renderizarCreadorPacienteNino = function (moduleKey) {
+    const prefix = `bnpm-${moduleKey}-new`;
+    return `
+        <section class="bnpm-section bnpm-section-soft">
+            <div class="bnpm-section-title">Crear paciente niño</div>
+            <p class="bnpm-section-copy">Este registro es independiente de Evaluación Adulto y servirá como base compartida entre Módulo A y Módulo B.</p>
+            <div class="bnpm-grid">
+                <label class="bnpm-field">
+                    <span class="bnpm-label">Nombre y apellido</span>
+                    <input id="${prefix}-name" type="text" class="bnpm-input">
+                </label>
+                <label class="bnpm-field">
+                    <span class="bnpm-label">Fecha de nacimiento</span>
+                    <input id="${prefix}-birth-date" type="date" class="bnpm-input">
+                </label>
+                <label class="bnpm-field">
+                    <span class="bnpm-label">Edad</span>
+                    <input id="${prefix}-age" type="number" class="bnpm-input">
+                </label>
+                <label class="bnpm-field">
+                    <span class="bnpm-label">Fecha de evaluación</span>
+                    <input id="${prefix}-evaluation-date" type="date" class="bnpm-input" value="${new Date().toISOString().slice(0, 10)}">
+                </label>
+                <label class="bnpm-field">
+                    <span class="bnpm-label">Diagnóstico</span>
+                    <input id="${prefix}-diagnosis" type="text" class="bnpm-input">
+                </label>
+                <label class="bnpm-field">
+                    <span class="bnpm-label">Derivación</span>
+                    <input id="${prefix}-referral" type="text" class="bnpm-input">
+                </label>
+                <label class="bnpm-field bnpm-field-wide">
+                    <span class="bnpm-label">Observaciones iniciales</span>
+                    <textarea id="${prefix}-notes" class="bnpm-textarea"></textarea>
+                </label>
+            </div>
+        </section>
+    `;
+};
+
+app.renderizarModuloAFormulario = function (patientIndex, patient) {
+    const values = this.obtenerBnpmValores('a', patientIndex);
+    const resumen = this.calcularResumenModuloA(values);
+    return `
+        <form id="bnpm-form-a" onsubmit="app.handleSubmitBnpm(event, 'a')">
+            <div class="bnpm-section bnpm-section-soft">
+                <div class="bnpm-section-title">Paciente seleccionado</div>
+                <div class="bnpm-section-copy mt-1">${this.escapeHtml(patient.nombre || 'Paciente')} ${patient.diagnostico ? `· ${this.escapeHtml(patient.diagnostico)}` : ''}</div>
+            </div>
+            ${BNPM_MODULE_A_SECTIONS.map(section => `
+                <section class="bnpm-section">
+                    <div class="bnpm-section-title">${this.formatearBnpmTexto(section.title)}</div>
+                    ${section.copy ? `<p class="bnpm-section-copy">${this.formatearBnpmTexto(section.copy)}</p>` : ''}
+                    <div class="bnpm-grid">
+                        ${section.fields.map(field => this.renderBnpmField(field, values)).join('')}
+                    </div>
+                </section>
+            `).join('')}
+            <section class="bnpm-section">
+                <div class="bnpm-section-title">Bloque de puntajes por dominio</div>
+                <p class="bnpm-section-copy">Escala sugerida: 0 = Nunca, 1 = Raramente, 2 = A veces, 3 = Frecuentemente, 4 = Siempre.</p>
+                ${BNPM_MODULE_A_DOMAINS.map(domain => `
+                    <div class="bnpm-domain-block mt-4">
+                        <div class="bnpm-domain-head">
+                            <h4>${this.formatearBnpmTexto(domain.label)}</h4>
+                        </div>
+                        ${domain.items.map((item, index) => `
+                            <div class="bnpm-task">
+                                <div class="bnpm-task-title">${this.formatearBnpmTexto(item)}</div>
+                                <div class="bnpm-scale-group mt-3">
+                                    ${BNPM_SCALE_04.map(option => `
+                                        <label class="bnpm-scale-option">
+                                            <input type="radio" name="module_a_${domain.key}_${index}" value="${option}" ${String(this.obtenerValorBnpm(values, `module_a_${domain.key}_${index}`)) === option ? 'checked' : ''}>
+                                            <span>${option}</span>
+                                        </label>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('')}
+                <div class="bnpm-summary-grid">
+                    ${resumen.map(item => `
+                            <div class="bnpm-summary-card">
+                            <div class="bnpm-summary-card-label">${this.formatearBnpmTexto(item.label)}</div>
+                            <div class="bnpm-summary-card-value">${item.value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </section>
+        </form>
+    `;
+};
+
+app.renderizarModuloBFormulario = function (patientIndex, patient) {
+    const values = this.obtenerBnpmValores('b', patientIndex);
+    const summary = this.calcularResumenModuloB(values);
+    return `
+        <form id="bnpm-form-b" onsubmit="app.handleSubmitBnpm(event, 'b')">
+            <section class="bnpm-section">
+                <div class="bnpm-section-title">1. Datos generales</div>
+                <div class="bnpm-grid">
+                    ${this.renderBnpmField({ type: 'text', name: 'patient_name', label: 'Nombre del paciente' }, { ...values, patient_name: this.obtenerValorBnpm(values, 'patient_name') || patient.nombre || '' })}
+                    ${this.renderBnpmField({ type: 'number', name: 'patient_age', label: 'Edad' }, values)}
+                    ${this.renderBnpmField({ type: 'date', name: 'clinical_date', label: 'Fecha' }, values)}
+                    ${this.renderBnpmField({ type: 'text', name: 'evaluator_name', label: 'Evaluador' }, values)}
+                    ${this.renderBnpmField({ type: 'radio', name: 'clinical_context', label: 'Contexto', options: ['Consultorio', 'Escuela', 'Otro'] }, values)}
+                    ${this.renderBnpmField({ type: 'text', name: 'clinical_context_other', label: 'Si es otro, detallar' }, values)}
+                </div>
+            </section>
+            ${BNPM_MODULE_B.domains.map(domain => `
+                <section class="bnpm-domain-block">
+                    <div class="bnpm-domain-head">
+                        <h4>${this.formatearBnpmTexto(domain.label)}</h4>
+                    </div>
+                    ${domain.tasks.map(task => `
+                        <div class="bnpm-task">
+                            <div class="bnpm-task-title">${this.formatearBnpmTexto(task.title)}</div>
+                            <div class="bnpm-grid mt-4">
+                                ${this.renderBnpmField({ type: 'scale', name: `${task.key}_score`, label: 'Puntaje global (0-4)', scale: BNPM_SCALE_04 }, values)}
+                                ${task.numeric ? task.numeric.map(item => this.renderBnpmField({ type: 'number', name: item.name, label: item.label }, values)).join('') : ''}
+                                ${task.extrasChoice ? this.renderBnpmField({ type: 'radio', name: task.extrasChoice.name, label: task.extrasChoice.label, options: task.extrasChoice.options, wide: true }, values) : ''}
+                                ${task.subscales ? `
+                                    <div class="bnpm-field bnpm-field-wide">
+                                        <span class="bnpm-label">Subdimensiones opcionales</span>
+                                        <div class="bnpm-grid">
+                                            ${task.subscales.map(subscale => this.renderBnpmField({ type: 'scale', name: `${task.key}_sub_${subscale.toLowerCase().replace(/\s+/g, '_')}`, label: subscale, scale: BNPM_SCALE_04 }, values)).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                ${this.renderBnpmField({ type: 'checkbox-group', name: `${task.key}_observables`, label: 'Observables', options: task.observables, wide: true }, values)}
+                                ${this.renderBnpmField({ type: 'textarea', name: `${task.key}_notes`, label: 'Notas clinicas', wide: true }, values)}
+                            </div>
+                        </div>
+                    `).join('')}
+                </section>
+            `).join('')}
+            <section class="bnpm-section bnpm-section-soft">
+                <div class="bnpm-section-title">4. Resumen por dominio</div>
+                <div id="bnpm-modulo-b-summary" class="bnpm-summary-grid">
+                    ${summary.map(item => `
+                        <div class="bnpm-summary-card">
+                            <div class="bnpm-summary-card-label">${this.formatearBnpmTexto(item.label)}</div>
+                            <div class="bnpm-summary-card-value">${item.value}</div>
+                        </div>
+                    `).join('')}
+                </div>
+            </section>
+            <section class="bnpm-section">
+                <div class="bnpm-section-title">5. Marcadores clínicos globales</div>
+                <div class="bnpm-grid">
+                    ${this.renderBnpmField({ type: 'checkbox-group', name: 'global_markers', label: 'Marcar lo predominante', options: BNPM_MODULE_B.markers, wide: true }, values)}
+                </div>
+            </section>
+            <section class="bnpm-section">
+                <div class="bnpm-section-title">6. Observaciones clínicas integradas</div>
+                <div class="bnpm-grid">
+                    ${this.renderBnpmField({ type: 'textarea', name: 'integrated_observations', label: 'Observaciones clínicas integradas', wide: true }, values)}
+                </div>
+            </section>
+            <section class="bnpm-section">
+                <div class="bnpm-section-title">7. Orientación terapéutica inicial</div>
+                <div class="bnpm-grid">
+                    ${this.renderBnpmField({ type: 'textarea', name: 'initial_guidance', label: 'Orientación terapéutica inicial', wide: true }, values)}
+                </div>
+            </section>
+        </form>
+    `;
+};
+
+app.calcularResumenModuloA = function (values) {
+    return BNPM_MODULE_A_DOMAINS.map(domain => {
+        const scores = domain.items.map((_, index) => Number(this.obtenerValorBnpm(values, `module_a_${domain.key}_${index}`))).filter(Number.isFinite);
+        const average = scores.length ? (scores.reduce((acc, value) => acc + value, 0) / scores.length).toFixed(1) : 'N/D';
+        return { label: domain.label, value: average };
+    });
+};
+
+app.calcularResumenModuloB = function (values) {
+    return BNPM_MODULE_B.domains.map(domain => {
+        const scores = domain.tasks
+            .map(task => Number(this.obtenerValorBnpm(values, `${task.key}_score`)))
+            .filter(Number.isFinite);
+        const average = scores.length ? (scores.reduce((acc, value) => acc + value, 0) / scores.length).toFixed(1) : 'N/D';
+        return { label: domain.label.replace('Dominio ', ''), value: average };
+    });
+};
+
+app.actualizarResumenModuloB = function () {
+    const form = document.getElementById('bnpm-form-b');
+    const container = document.getElementById('bnpm-modulo-b-summary');
+    if (!form || !container) return;
+    const values = this.serializarFormularioBnpm(form);
+    const summary = this.calcularResumenModuloB(values);
+    container.innerHTML = summary.map(item => `
+        <div class="bnpm-summary-card">
+            <div class="bnpm-summary-card-label">${this.formatearBnpmTexto(item.label)}</div>
+            <div class="bnpm-summary-card-value">${item.value}</div>
+        </div>
+    `).join('');
+};
+
+app.handleSubmitBnpm = function (event, moduleKey) {
+    event.preventDefault();
+    this.guardarFormularioBnpm(moduleKey);
+};
+
+app.guardarFormularioBnpm = async function (moduleKey) {
+    const form = document.getElementById(`bnpm-form-${moduleKey}`);
+    const patientIndex = this[`bnpmPacienteSeleccionado${moduleKey.toUpperCase()}`];
+    if (!form || patientIndex === '') {
+        alert('Selecciona o crea primero un paciente niño.');
+        return;
+    }
+
+    const payload = this.serializarFormularioBnpm(form);
+    const patient = this.pacientes[Number(patientIndex)] || {};
+    const backendPayload = {
+        nombre: payload.patient_name || patient.nombre || patient.nombre,
+        edad: payload.patient_age || patient.edad || '',
+        fecha: payload.clinical_date || patient.fecha || new Date().toISOString().slice(0, 10),
+        tipo_registro: 'nino',
+        tipo_evaluacion: 'bnpm_nino',
+        bnpm: {
+            ...(patient.bnpm || {}),
+            [moduleKey === 'a' ? 'moduloA' : 'moduloB']: {
+                savedAt: new Date().toISOString(),
+                values: payload
+            },
+            compartir_familia: {
+                estado: 'placeholder'
+            }
+        }
+    };
+
+    this.guardarBnpmModulo(moduleKey, patientIndex, payload);
+    const ok = await this.actualizarPacienteBnpm(patientIndex, backendPayload);
+    if (!ok) {
+        alert('No se pudo guardar el módulo en el registro del paciente. Se conservó una copia local en este navegador.');
+    }
+    this.renderizarModuloNino(moduleKey);
+    alert(`Módulo ${moduleKey.toUpperCase()} guardado para ${this.pacientes[Number(patientIndex)]?.nombre || 'el paciente seleccionado'}.`);
+};
+
+app.compartirModuloAFamilia = function () {
+    alert('La opción para compartir con familia queda preparada como siguiente paso, pero hoy no existe una ruta pública ni soporte backend para generar un enlace funcional.');
+};
+
+app.descargarPdfModuloB = function () {
+    const form = document.getElementById('bnpm-form-b');
+    const patientIndex = this.bnpmPacienteSeleccionadoB;
+    if (!form || patientIndex === '' || !window.jspdf) {
+        alert('No fue posible preparar el PDF del Módulo B.');
+        return;
+    }
+
+    const values = this.serializarFormularioBnpm(form);
+    const summary = this.calcularResumenModuloB(values);
+    const patient = this.pacientes[Number(patientIndex)] || {};
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const pageW = doc.internal.pageSize.getWidth();
+    const margin = 14;
+    let y = 18;
+
+    const ensureSpace = (extra = 20) => {
+        if (y + extra > 285) {
+            doc.addPage();
+            y = 18;
+        }
+    };
+
+    doc.setFillColor(74, 92, 146);
+    doc.rect(0, 0, pageW, 24, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('BNPM - Módulo B', margin, 14);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Planilla de registro clínico', margin, 20);
+
+    y = 34;
+    doc.setTextColor(30, 41, 59);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Datos generales', margin, y);
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    [
+        ['Paciente', values.patient_name || patient.nombre || 'No indicado'],
+        ['Edad', values.patient_age || 'No indicada'],
+        ['Fecha', values.clinical_date || 'No indicada'],
+        ['Evaluador', values.evaluator_name || 'No indicado'],
+        ['Contexto', values.clinical_context === 'Otro' ? `${values.clinical_context || ''} ${values.clinical_context_other || ''}`.trim() : (values.clinical_context || 'No indicado')]
+    ].forEach(([label, value]) => {
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${label}:`, margin, y);
+        doc.setFont('helvetica', 'normal');
+        doc.text(String(value), margin + 28, y);
+        y += 6;
+    });
+
+    BNPM_MODULE_B.domains.forEach(domain => {
+        ensureSpace(28);
+        y += 3;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text(domain.label, margin, y);
+        y += 4;
+
+        const body = domain.tasks.map(task => [
+            task.title,
+            values[`${task.key}_score`] || 'N/D',
+            this.obtenerArrayBnpm(values, `${task.key}_observables`).join(', ') || '-',
+            values[`${task.key}_notes`] || '-'
+        ]);
+
+        doc.autoTable({
+            startY: y + 2,
+            head: [['Tarea', 'Puntaje', 'Observables', 'Notas']],
+            body,
+            margin: { left: margin, right: margin },
+            styles: { fontSize: 8, cellPadding: 2.5, textColor: [51, 65, 85] },
+            headStyles: { fillColor: [74, 92, 146], textColor: [255, 255, 255] },
+            columnStyles: {
+                0: { cellWidth: 42 },
+                1: { cellWidth: 18 },
+                2: { cellWidth: 55 },
+                3: { cellWidth: 61 }
+            }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+    });
+
+    ensureSpace(32);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('Resumen por dominio', margin, y);
+    y += 4;
+    doc.autoTable({
+        startY: y + 2,
+        head: [['Dominio', 'Promedio']],
+        body: summary.map(item => [item.label, item.value]),
+        margin: { left: margin, right: margin },
+        styles: { fontSize: 8.5, cellPadding: 2.5 },
+        headStyles: { fillColor: [59, 141, 119], textColor: [255, 255, 255] }
+    });
+    y = doc.lastAutoTable.finalY + 8;
+
+    const markers = this.obtenerArrayBnpm(values, 'global_markers').join(', ') || 'Sin marcadores seleccionados';
+    ensureSpace(40);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Marcadores clinicos globales', margin, y);
+    y += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    const markersLines = doc.splitTextToSize(markers, pageW - margin * 2);
+    doc.text(markersLines, margin, y);
+    y += markersLines.length * 4 + 4;
+
+    ['integrated_observations', 'initial_guidance'].forEach((field, index) => {
+        ensureSpace(36);
+        doc.setFont('helvetica', 'bold');
+        doc.text(index === 0 ? 'Observaciones clínicas integradas' : 'Orientación terapéutica inicial', margin, y);
+        y += 6;
+        doc.setFont('helvetica', 'normal');
+        const lines = doc.splitTextToSize(values[field] || 'Sin contenido registrado.', pageW - margin * 2);
+        doc.text(lines, margin, y);
+        y += lines.length * 4 + 4;
+    });
+
+    const filenameBase = (values.patient_name || patient.nombre || 'Paciente').replace(/\s+/g, '_');
+    doc.save(`BNPM_Módulo_B_${filenameBase}.pdf`);
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     app.init();
 
@@ -2185,4 +3332,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-siguiente-audio')?.addEventListener('click', () => protocolo.siguienteAudio());
     document.getElementById('evaluationFormMedicion')?.addEventListener('submit', (e) => protocolo.guardarEvaluacion(e));
 });
-

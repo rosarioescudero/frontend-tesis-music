@@ -3,7 +3,15 @@
  */
 
 lucide.createIcons();
-const CONFIG = { API_URL: 'http://localhost:3000/api/pacientes' };
+const CONFIG = { API_URL: '/api/pacientes' };
+// CONFIGURACIÓN DINÁMICA DE LA URL
+const URL_BACKEND_REMOTO = 'https://tu-backend-musica.onrender.com'; // <--- PEGA AQUÍ LA URL DE TUS COMPAÑEROS
+
+const CONFIG = {
+    API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5000/api/pacientes'  // Si estás en tu compu
+        : `${URL_BACKEND_REMOTO}/api/pacientes`  // Si estás en Render
+};
 
 // =======================================================
 // ⚠️ TUS ARCHIVOS CON SUS RUTAS (CARPETAS) ⚠️
@@ -1722,7 +1730,7 @@ const protocolo = {
         alert(`Iniciando análisis de la pista ${pistaNumero} con Python. Esto demorará unos segundos...`);
 
         try {
-            const response = await fetch(`http://localhost:3000/api/pacientes/${index}/analizar/${pistaNumero}`, {
+            const response = await fetch(`/api/pacientes/${index}/analizar/${pistaNumero}`, {
                 method: 'POST'
             });
 
@@ -1982,7 +1990,7 @@ const protocolo = {
             }
         } catch (error) {
             console.error("Error al conectar:", error);
-            alert("Error al conectar con el servidor Node.js en localhost:3000. Revisa que el servidor esté corriendo.");
+           alert("Error al conectar con el servidor. Intentalo nuevamente.");
         }
     }
 };

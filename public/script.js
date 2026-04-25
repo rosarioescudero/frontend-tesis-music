@@ -176,18 +176,22 @@ const app = {
         const text = document.getElementById('status-text');
         try {
             const respuesta = await fetch(CONFIG.API_URL);
-            if (respuesta.ok) {
-                this.pacientes = await respuesta.json();
-                dot.className = "w-2.5 h-2.5 rounded-full bg-green-500";
-                text.textContent = "Servidor Conectado";
-                text.className = "text-white/80 font-medium text-green-300";
-                this.renderizarTablaPacientes(this.pacientes);
+        
+            if (!respuesta.ok) {
+                throw new Error(`Error HTTP: ${respuesta.status}`);
             }
+        
+            this.pacientes = await respuesta.json();
+        
+            dot.className = "w-2.5 h-2.5 rounded-full bg-green-500";
+            text.textContent = "Servidor Conectado";
+        
         } catch (error) {
+            console.error("Error conexión:", error);
+        
             dot.className = "w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse";
             text.textContent = "Servidor Apagado";
-            text.className = "text-white/80 font-medium";
-        }
+        }    
     },
     cambiarVista: function (vistaId) {
         document.querySelectorAll('.vista-seccion').forEach(el => {

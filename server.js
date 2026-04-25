@@ -4,10 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
+const app = express();
 // 👇 ESTO ES LO IMPORTANTE
 app.use(express.static(path.join(__dirname, 'public')));
-
-const app = express();
 const PORT = process.env.PORT || 3000;
 const archivoDatos = path.join(__dirname, 'pacientes.json');
 const videosDir = path.join(__dirname, 'videos');
@@ -22,7 +21,6 @@ if (!fs.existsSync(analysisOutputsDir)) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
 app.use('/audios', express.static(path.join(__dirname, 'audios')));
 app.use('/videos', express.static(videosDir));
 app.use('/analysis_outputs', express.static(analysisOutputsDir));
@@ -293,6 +291,9 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
         });
     }
 });
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.listen(PORT, () => {
     console.log('\n==============================================');
@@ -303,6 +304,3 @@ app.listen(PORT, () => {
     console.log('==============================================\n');
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});

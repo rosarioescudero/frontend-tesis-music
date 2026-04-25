@@ -4,6 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
 
+// 👇 ESTO ES LO IMPORTANTE
+app.use(express.static(path.join(__dirname, 'public')));
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const archivoDatos = path.join(__dirname, 'pacientes.json');
@@ -298,4 +301,8 @@ app.listen(PORT, () => {
     console.log('Carpeta de videos activada y lista.');
     console.log('Carpeta de resultados de análisis activada.');
     console.log('==============================================\n');
+});
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

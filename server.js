@@ -231,7 +231,7 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
         const rutaVideo = path.join(pacienteDir, nombreArchivo);
         const outputDir = path.join(analysisOutputsDir, `paciente_${index}`, `pista_${pista}`);
 
-        const response = await fetch('http://localhost:5000/analizar', {
+        const response = await fetch('https://backend-tesis-music.onrender.com/analizar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -286,7 +286,7 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
 
 app.listen(PORT, () => {
     console.log('\n==============================================');
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
     console.log('Carpeta de audios activada y lista.');
     console.log('Carpeta de videos activada y lista.');
     console.log('Carpeta de resultados de análisis activada.');

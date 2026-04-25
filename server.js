@@ -126,7 +126,14 @@ const upload = multer({
 });
 
 app.get('/api/pacientes', (req, res) => {
-    res.json(leerPacientes());
+    const pacientes = leerPacientes();
+
+    const pacientesConVideos = pacientes.map(p => ({
+        ...p,
+        videos: p.videos || {}
+    }));
+
+    res.json(pacientesConVideos);
 });
 
 app.post('/api/pacientes', (req, res) => {

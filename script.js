@@ -5,7 +5,7 @@
 lucide.createIcons();
 const CONFIG = { API_URL: '/api/pacientes' };
 // CONFIGURACIÓN DINÁMICA DE LA URL
-const URL_BACKEND_REMOTO = 'https://tu-backend-musica.onrender.com'; // <--- PEGA AQUÍ LA URL DE TUS COMPAÑEROS
+const URL_BACKEND_REMOTO = 'https://backend-tesis-music.onrender.com/'; // <--- PEGA AQUÍ LA URL DE TUS COMPAÑEROS
 
 const CONFIG = {
     API_URL: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'

@@ -5,7 +5,7 @@ const path = require('path');
 const multer = require('multer');
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const archivoDatos = path.join(__dirname, 'pacientes.json');
 const videosDir = path.join(__dirname, 'videos');
 const analysisOutputsDir = path.join(__dirname, 'analysis_outputs');

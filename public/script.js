@@ -905,10 +905,6 @@ app.extraerNombreArchivo = function (valor) {
     return String(valor || '').split('/').pop().split('\\').pop();
 };
 
-app.crearRutaManifestAnalisis = function (indexPaciente, nroPista) {
-    return `${window.location.origin}/analysis_outputs/paciente_${indexPaciente}/pista_${nroPista}/analysis_results.json`;
-};
-
 app.leerAnalisisPersistidos = function () {
     try {
         return JSON.parse(localStorage.getItem(ANALYSIS_STORAGE_KEY) || '{}');
@@ -975,7 +971,7 @@ app.normalizarResultadoAnalisis = function (data, nroPista, context = {}) {
         video,
         graficos,
         cantidadGraficos: graficos.length,
-        manifestUrl: context.manifestUrl || this.crearRutaManifestAnalisis(context.indexPaciente, nroPista),
+        manifestUrl: null,
         categoriaActiva: 'todas',
         origen: context.origen || 'runtime'
     };
@@ -1159,7 +1155,7 @@ app.cargarAnalisisGuardado = async function (indexPaciente, nroPista, opciones =
         return this.analisisPersistidos[clave];
     }
 
-    const manifestUrl = this.crearRutaManifestAnalisis(indexPaciente, nroPista);
+    const manifestUrl = null;
     try {
         const response = await fetch(manifestUrl, { cache: 'no-store' });
         if (!response.ok) return this.analisisPersistidos[clave] || null;

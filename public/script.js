@@ -4,7 +4,7 @@
 
 lucide.createIcons();
 const CONFIG = {
-    API_URL: 'https://backend-tesis-music.onrender.com/api/pacientes'
+    API_URL: '/api/pacientes'
 };
 
 // =======================================================

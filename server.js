@@ -7,6 +7,7 @@ const multer = require('multer');
 const app = express();
 // 👇 ESTO ES LO IMPORTANTE
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/videos', express.static(path.join(__dirname, 'videos')));
 const PORT = process.env.PORT || 3000;
 const archivoDatos = path.join(__dirname, 'pacientes.json');
 const videosDir = path.join(__dirname, 'videos');

@@ -5,6 +5,8 @@ const path = require('path');
 const multer = require('multer');
 
 const app = express();
+// 👇 ESTO ES LO IMPORTANTE
+app.use(express.static(path.join(__dirname, 'public')));
 const PORT = process.env.PORT || 3000;
 const archivoDatos = path.join(__dirname, 'pacientes.json');
 const videosDir = path.join(__dirname, 'videos');
@@ -19,7 +21,6 @@ if (!fs.existsSync(analysisOutputsDir)) {
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname));
 app.use('/audios', express.static(path.join(__dirname, 'audios')));
 app.use('/videos', express.static(videosDir));
 app.use('/analysis_outputs', express.static(analysisOutputsDir));
@@ -126,7 +127,14 @@ const upload = multer({
 });
 
 app.get('/api/pacientes', (req, res) => {
-    res.json(leerPacientes());
+    const pacientes = leerPacientes();
+
+    const pacientesConVideos = pacientes.map(p => ({
+        ...p,
+        videos: p.videos || {}
+    }));
+
+    res.json(pacientesConVideos);
 });
 
 app.post('/api/pacientes', (req, res) => {
@@ -134,6 +142,30 @@ app.post('/api/pacientes', (req, res) => {
     pacientes.push(req.body);
     fs.writeFileSync(archivoDatos, JSON.stringify(pacientes, null, 2));
     res.status(201).json({ mensaje: 'Paciente guardado con éxito' });
+});
+
+app.patch('/api/pacientes/:index', (req, res) => {
+    const pacientes = leerPacientes();
+    const index = Number(req.params.index);
+
+    if (!Number.isInteger(index) || index < 0 || index >= pacientes.length) {
+        return res.status(404).json({ error: 'Paciente no encontrado.' });
+    }
+
+    const actual = pacientes[index] || {};
+    const payload = req.body || {};
+
+    pacientes[index] = {
+        ...actual,
+        ...payload,
+        bnpm: {
+            ...(actual.bnpm || {}),
+            ...(payload.bnpm || {})
+        }
+    };
+
+    fs.writeFileSync(archivoDatos, JSON.stringify(pacientes, null, 2));
+    res.json({ mensaje: 'Paciente actualizado con Ã©xito.', paciente: pacientes[index] });
 });
 
 app.post('/api/pacientes/:index/videos/:pista', upload.single('video'), (req, res) => {
@@ -204,29 +236,71 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
             return res.status(404).json({ error: 'No se encontró el audio del metrónomo asociado a esta pista.' });
         }
 
-        // ✅ RESPUESTA TEMPORAL
-        return res.json({
-            mensaje: "Análisis no disponible en producción aún",
-            paciente: index,
-            pista: pista,
-            graficos: [],
-            generated_files: []
+        const rutaVideo = path.join(pacienteDir, nombreArchivo);
+        const outputDir = path.join(analysisOutputsDir, `paciente_${index}`, `pista_${pista}`);
+
+        const response = await fetch('https://backend-tesis-music.onrender.com/analizar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ruta_video: rutaVideo,
+                nombre_archivo: nombreArchivo,
+                ruta_audio_metronomo: rutaAudioMetronomo,
+                output_dir: outputDir
+            })
         });
 
+        const rawText = await response.text();
+        let data = {};
+
+        try {
+            data = rawText ? JSON.parse(rawText) : {};
+        } catch (parseError) {
+            console.error('Respuesta inválida del servidor Python:', rawText);
+            return res.status(502).json({
+                error: 'El servidor Python devolvió una respuesta no válida.',
+                detalle: rawText
+            });
+        }
+
+        if (!response.ok) {
+            return res.status(response.status).json({
+                error: data.message || data.error || 'Error durante el análisis.',
+                detalle: data
+            });
+        }
+
+        if (Array.isArray(data.graficos)) {
+            data.graficos = data.graficos
+                .filter(filePath => fs.existsSync(filePath))
+                .map(localPathToPublicUrl);
+        }
+
+        if (Array.isArray(data.generated_files)) {
+            data.generated_files = data.generated_files
+                .filter(filePath => fs.existsSync(filePath))
+                .map(localPathToPublicUrl);
+        }
+
+        res.json(data);
     } catch (error) {
-        console.error('Error:', error);
+        console.error('Error al contactar con Python:', error);
         res.status(500).json({
-            error: 'Error en el servidor.',
+            error: 'El servidor de Python no respondió.',
             detalle: error.message
         });
     }
 });
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 app.listen(PORT, () => {
     console.log('\n==============================================');
-    console.log(`Servidor corriendo en http://localhost:${PORT}`);
+    console.log(`Servidor corriendo en el puerto ${PORT}`);
     console.log('Carpeta de audios activada y lista.');
     console.log('Carpeta de videos activada y lista.');
     console.log('Carpeta de resultados de análisis activada.');
     console.log('==============================================\n');
 });
+

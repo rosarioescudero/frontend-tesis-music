@@ -357,3 +357,345 @@
     color: #4A5C92;
     background: #eef2ff;
 }
+
+.child-eval-card {
+    display: block;
+    width: 100%;
+    background: #ffffff;
+    border-radius: 1.5rem;
+    padding: 2rem;
+    text-align: left;
+    box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.child-eval-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 24px 50px rgba(15, 23, 42, 0.11);
+}
+
+.child-eval-card-family {
+    border-left: 4px solid #3b8d77;
+}
+
+.child-eval-card-clinical {
+    border-left: 4px solid #4A5C92;
+}
+
+.child-eval-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.child-eval-card-icon {
+    width: 3.6rem;
+    height: 3.6rem;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #4A5C92;
+}
+
+.child-eval-card-badge {
+    border-radius: 9999px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #64748b;
+    background: #f8fafc;
+}
+
+.child-eval-card-title {
+    font-size: 2rem;
+    line-height: 1.1;
+    font-weight: 700;
+    color: #1e293b;
+    margin-top: 1.6rem;
+}
+
+.child-eval-card-copy {
+    margin-top: 1rem;
+    color: #64748b;
+    font-size: 1rem;
+    line-height: 1.7;
+    max-width: 34rem;
+}
+
+.child-eval-card-footer {
+    margin-top: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #3b8d77;
+}
+
+.bnpm-shell {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1.75rem;
+    box-shadow: 0 22px 50px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.bnpm-header {
+    padding: 1.8rem 2rem;
+    background: linear-gradient(135deg, #4A5C92 0%, #6276b0 100%);
+    color: #ffffff;
+}
+
+.bnpm-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1.25rem 2rem;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.bnpm-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.bnpm-toolbar-select {
+    min-width: 18rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.9rem;
+    background: #ffffff;
+    padding: 0.75rem 0.95rem;
+    font-size: 0.92rem;
+    color: #1e293b;
+    outline: none;
+}
+
+.bnpm-toolbar-select:focus {
+    border-color: #4A5C92;
+    box-shadow: 0 0 0 3px rgba(74, 92, 146, 0.12);
+}
+
+.bnpm-form {
+    padding: 1.5rem 2rem 2rem;
+}
+
+.bnpm-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 1.25rem;
+    background: #f8fafc;
+    padding: 2rem;
+    text-align: center;
+    color: #64748b;
+}
+
+.bnpm-section {
+    border: 1px solid #e2e8f0;
+    border-radius: 1.25rem;
+    padding: 1.2rem;
+    background: #ffffff;
+    margin-bottom: 1rem;
+}
+
+.bnpm-section-soft {
+    background: #f8fafc;
+}
+
+.bnpm-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.bnpm-section-copy {
+    margin-top: 0.35rem;
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.bnpm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.bnpm-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.bnpm-field-wide {
+    grid-column: 1 / -1;
+}
+
+.bnpm-label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    color: #475569;
+}
+
+.bnpm-input,
+.bnpm-textarea,
+.bnpm-select {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.9rem;
+    background: #ffffff;
+    padding: 0.78rem 0.95rem;
+    font-size: 0.92rem;
+    color: #1e293b;
+    outline: none;
+}
+
+.bnpm-textarea {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.bnpm-input:focus,
+.bnpm-textarea:focus,
+.bnpm-select:focus {
+    border-color: #4A5C92;
+    box-shadow: 0 0 0 3px rgba(74, 92, 146, 0.12);
+}
+
+.bnpm-choice-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+}
+
+.bnpm-choice-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid #dbe2ea;
+    background: #ffffff;
+    border-radius: 9999px;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.82rem;
+    color: #475569;
+}
+
+.bnpm-scale-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.bnpm-scale-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 2.35rem;
+    padding: 0.5rem 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.85rem;
+    background: #ffffff;
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+
+.bnpm-domain-block {
+    border: 1px solid #dbe2ea;
+    border-radius: 1.25rem;
+    overflow: hidden;
+    margin-bottom: 1.25rem;
+}
+
+.bnpm-domain-head {
+    padding: 1rem 1.2rem;
+    background: #eff6ff;
+    border-bottom: 1px solid #dbeafe;
+}
+
+.bnpm-domain-head h4 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.bnpm-task {
+    padding: 1rem 1.2rem;
+    border-bottom: 1px solid #eef2f7;
+}
+
+.bnpm-task:last-child {
+    border-bottom: 0;
+}
+
+.bnpm-task-title {
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.bnpm-task-copy {
+    margin-top: 0.25rem;
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.bnpm-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+
+.bnpm-summary-card {
+    border: 1px solid #dbe2ea;
+    border-radius: 1rem;
+    background: #ffffff;
+    padding: 0.85rem;
+}
+
+.bnpm-summary-card-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.bnpm-summary-card-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e293b;
+    margin-top: 0.25rem;
+}
+
+.bnpm-note {
+    margin-top: 0.85rem;
+    border: 1px dashed #cbd5e1;
+    border-radius: 1rem;
+    background: #fffbea;
+    color: #854d0e;
+    padding: 0.9rem 1rem;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .child-eval-card-title {
+        font-size: 1.7rem;
+    }
+
+    .bnpm-header,
+    .bnpm-toolbar,
+    .bnpm-form {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}

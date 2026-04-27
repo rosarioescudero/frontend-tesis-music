@@ -237,7 +237,7 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
             return res.status(404).json({ error: 'No se encontró el audio del metrónomo asociado a esta pista.' });
         }
 
-        const rutaVideo = path.join(pacienteDir, nombreArchivo);
+        const rutaVideo = `https://tesis-music.onrender.com/videos/paciente_${index}/${nombreArchivo}`;
         const outputDir = path.join(analysisOutputsDir, `paciente_${index}`, `pista_${pista}`);
 
         const response = await fetch('https://backend-tesis-music.onrender.com/analizar', {

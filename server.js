@@ -271,18 +271,6 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
             });
         }
 
-        if (Array.isArray(data.graficos)) {
-            data.graficos = data.graficos
-                .filter(filePath => fs.existsSync(filePath))
-                .map(localPathToPublicUrl);
-        }
-
-        if (Array.isArray(data.generated_files)) {
-            data.generated_files = data.generated_files
-                .filter(filePath => fs.existsSync(filePath))
-                .map(localPathToPublicUrl);
-        }
-
         res.json(data);
     } catch (error) {
         console.error('Error al contactar con Python:', error);

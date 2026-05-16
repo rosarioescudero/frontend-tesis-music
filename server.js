@@ -240,7 +240,7 @@ app.post('/api/pacientes/:index/analizar/:pista', async (req, res) => {
         const rutaVideo = `https://tesis-music.onrender.com/videos/paciente_${index}/${nombreArchivo}`;
         const outputDir = path.join(analysisOutputsDir, `paciente_${index}`, `pista_${pista}`);
 
-        const response = await fetch('https://backend-tesis-music.onrender.com/analizar', {
+        const response = await fetch('https://backend-tesis-music-docker.onrender.com/analizar', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
